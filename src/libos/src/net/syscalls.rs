@@ -18,13 +18,19 @@ pub fn do_socket(domain: c_int, socket_type: c_int, protocol: c_int) -> Result<i
     let sock_type = SocketType::try_from(socket_type & (!file_flags.bits()))?;
 
     let file_ref: Arc<dyn File> = match sock_domain {
+
         AddressFamily::LOCAL => {
-            let unix_socket = unix_socket(sock_type, file_flags, protocol)?;
-            Arc::new(unix_socket)
+            Arc::new(NfvSocket::new(sock_domain, sock_type, file_flags, protocol)?)
+            // edit by kxc: NfvSocket and HostSocket could not Coexist here.
+            // Cause file_ref.as_host_socket() will find multiple candidate.
+            // let unix_socket = unix_socket(sock_type, file_flags, protocol)?;
+            // Arc::new(unix_socket)
         }
         _ => {
-            let socket = HostSocket::new(sock_domain, sock_type, file_flags, protocol)?;
-            Arc::new(socket)
+            Arc::new(NfvSocket::new(sock_domain, sock_type, file_flags, protocol)?)
+            //edit by kxc
+            // let socket = HostSocket::new(sock_domain, sock_type, file_flags, protocol)?;
+            // Arc::new(socket)
         }
     };
 

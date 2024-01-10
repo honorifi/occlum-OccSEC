@@ -8,11 +8,13 @@ pub use self::io_multiplexing::{
 };
 pub use self::socket::{
     mmsghdr, msghdr, msghdr_mut, socketpair, unix_socket, AddressFamily, AsUnixSocket, FileFlags,
-    HostSocket, HostSocketType, HowToShut, Iovs, IovsMut, MsgHdr, MsgHdrFlags, MsgHdrMut,
+    HostSocket, /*HostSocketType, edit by kxc ->*/ NfvSocket, NfvSocketType,/*<-edit by kxc*/ HowToShut, Iovs, IovsMut, MsgHdr, MsgHdrFlags, MsgHdrMut,
     RecvFlags, SendFlags, SliceAsLibcIovec, SockAddr, SocketType, UnixAddr,
 };
+pub use self::tls::{client, comm, server, tls_test};
 pub use self::syscalls::*;
 
 mod io_multiplexing;
 mod socket;
+mod tls;
 mod syscalls;

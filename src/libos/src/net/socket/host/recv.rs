@@ -1,5 +1,6 @@
 use super::*;
 use crate::untrusted::{SliceAsMutPtrAndLen, SliceAsPtrAndLen, UntrustedSliceAlloc};
+use super::local_proxy::EncryptMsg;
 
 impl HostSocket {
     pub fn recv(&self, buf: &mut [u8], flags: RecvFlags) -> Result<usize> {
@@ -136,6 +137,92 @@ impl HostSocket {
             msg_controllen_recvd,
             flags_recvd,
         ))
+    }
+}
+
+// copy from recv.rs, edit
+impl NfvSocket {
+    pub fn recv(&self, buf: &mut [u8], flags: RecvFlags) -> Result<usize> {
+        // kssp mode on
+        if self.pub_key_hash_tag != 0 {
+            println!("call recv");
+            if let Err(err) = self.check_handshake_before_comm() {
+                return self.host_sc.recv(buf, flags);
+            }
+
+            let mut rec_buf = vec![0u8; buf.len()];
+            let len = match self.host_sc.recv(&mut rec_buf, flags) {
+                Ok(ret) => ret,
+                Err(err) => {
+                    return Err(err);
+                }
+            };
+
+            let dec_msg = self.aes_cipher.read().unwrap().decrypt_to(buf, &rec_buf[0..len]);
+            // // print!("recvfr: ");
+            // // echo_buf!(&rec_buf);
+            // // print!("decmsg: ");
+            // // echo_buf!(&buf[0..len]);
+            Ok(len)
+            // self.fetch_msg(buf, flags)
+        }
+        // kssp mode off
+        else {
+            self.host_sc.recv(buf, flags)
+        }
+    }
+
+    pub fn recvmsg<'a, 'b>(&self, msg: &'b mut MsgHdrMut<'a>, flags: RecvFlags) -> Result<usize> {
+        if self.pub_key_hash_tag != 0 {
+            // Do OCall-based recvmsg
+            println!("call recvmsg");
+            if let Err(err) = self.check_handshake_before_comm() {
+                return self.host_sc.recvmsg(msg, flags);
+            }
+            let (bytes_recvd, namelen_recvd, controllen_recvd, flags_recvd) = {
+                // Acquire mutable references to the name and control buffers
+                let (iovs, name, control) = msg.get_iovs_name_and_control_mut();
+                // Fill the data, the name, and the control buffers
+                let data = iovs.as_slices_mut();
+
+                let data_length = data.iter().map(|s| s.len()).sum();
+                let u_allocator = UntrustedSliceAlloc::new(data_length)?;
+                let mut u_data = {
+                    let mut bufs = Vec::new();
+                    for ref buf in data.iter() {
+                        bufs.push(u_allocator.new_slice_mut(buf.len())?);
+                    }
+                    bufs
+                };
+                let retval = self.host_sc.do_recvmsg_untrusted_data(&mut u_data, flags, name, control)?;
+
+                let mut remain = retval.0;
+                let aes_cipher = self.aes_cipher.read().unwrap();
+                for (i, buf) in data.iter_mut().enumerate() {
+                    if remain >= buf.len() {
+                        // u_data[i].write_to_slice(buf)?;
+                        aes_cipher.decrypt_to(buf, &u_data[i]);
+                        remain -= buf.len();
+                    } else {
+                        // u_data[i].write_to_slice(&mut buf[0..remain])?;
+                        aes_cipher.decrypt_to(&mut buf[0..remain], &u_data[i]);
+                        break;
+                    }
+                }
+                drop(aes_cipher);
+                retval
+            };
+
+            // Update the output lengths and flags
+            msg.set_name_len(namelen_recvd)?;
+            msg.set_control_len(controllen_recvd)?;
+            msg.set_flags(flags_recvd);
+
+            Ok(bytes_recvd)
+        }
+        else {
+            self.host_sc.recvmsg(msg, flags)
+        }
     }
 }
 

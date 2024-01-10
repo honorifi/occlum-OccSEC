@@ -1,4 +1,5 @@
 use super::*;
+use super::local_proxy::EncryptMsg;
 
 impl HostSocket {
     pub fn send(&self, buf: &[u8], flags: SendFlags) -> Result<usize> {
@@ -85,6 +86,85 @@ impl HostSocket {
 
         debug_assert!(bytes_sent >= 0);
         Ok(bytes_sent as usize)
+    }
+}
+
+// copy from send.rs, edit
+impl NfvSocket {
+    pub fn send(&self, buf: &[u8], flags: SendFlags) -> Result<usize> {
+        // kssp mode on
+        if self.pub_key_hash_tag != 0 {
+            println!("call send");
+            if let Err(err) = self.check_handshake_before_comm() {
+                return self.host_sc.send(buf, flags);
+            }
+            // send can only happen after connect, and right before connect happend
+            // aes_cipher will be write-block, then once the read_lock acquired, the aes_cipher must be ready.
+            // let enc_msg = self.aes_cipher.read().unwrap().encrypt(buf);
+            // // print!("origin: ");
+            // // echo_buf!(buf);
+            // // print!("sendto: ");
+            // // echo_buf!(&enc_msg);
+            // self.host_sc.send(&enc_msg, flags)
+            // let enc_msg = self.aes_cipher.read().unwrap().encrypt_mark_len(buf);
+            let enc_msg = self.aes_cipher.read().unwrap().encrypt(buf);
+            self.host_sc.send(&enc_msg, flags)
+        }
+        // kssp mode off
+        else {
+            self.host_sc.send(buf, flags)
+        }
+    }
+
+    pub fn sendmsg<'a, 'b>(&self, msg: &'b MsgHdr<'a>, flags: SendFlags) -> Result<usize> {
+        if self.pub_key_hash_tag != 0 {
+            println!("call sendmsg");
+            if let Err(err) = self.check_handshake_before_comm() {
+                return self.host_sc.sendmsg(msg, flags);
+            }
+            let data = msg.get_iovs().as_slices();
+            let name = msg.get_name();
+            let control = msg.get_control();
+
+            let data_length = data.iter().map(|s| s.len()).sum();
+            let u_allocator = UntrustedSliceAlloc::new(data_length)?;
+            let u_data = {
+                let mut bufs = Vec::new();
+                let aes_cipher = self.aes_cipher.read().unwrap();
+                for buf in data {
+                    let enc_msg = aes_cipher.encrypt(buf);
+                    bufs.push(u_allocator.new_slice(&enc_msg)?);
+                }
+                drop(aes_cipher);
+                bufs
+            };
+
+            self.host_sc.do_sendmsg_untrusted_data(&u_data, flags, name, control)
+        }
+        else {
+            self.host_sc.sendmsg(msg, flags)
+        }
+    }
+
+    pub(super) fn do_sendmsg(
+        &self,
+        data: &[&[u8]],
+        flags: SendFlags,
+        name: Option<&[u8]>,
+        control: Option<&[u8]>,
+    ) -> Result<usize> {
+        let data_length = data.iter().map(|s| s.len()).sum();
+        let u_allocator = UntrustedSliceAlloc::new(data_length)?;
+        let u_data = {
+            let mut ret = Vec::new();
+            for buf in data {
+                let enc_buf = self.rc4_cipher.encrypt(buf);
+                ret.push(u_allocator.new_slice(&enc_buf)?);
+            }
+            ret
+        };
+
+        self.host_sc.do_sendmsg_untrusted_data(&u_data, flags, name, control)
     }
 }
 

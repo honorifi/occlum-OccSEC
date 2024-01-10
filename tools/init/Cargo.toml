@@ -5,6 +5,14 @@ authors = ["LI Qing geding.lq@antgroup.com"]
 edition = "2021"
 
 [dependencies]
+base64 = "0.2"      # edit by kxc, required by tls
 libc = "0.2.84"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+rand = "0.8"         # edit by kxc, required by tls
+num-bigint = { version = "0.4", features = ["rand"] }    # edit by kxc, required by tls
+
+
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_types = { path = "../../deps/rust-sgx-sdk/sgx_types" }       # edit by kxc, required by tls
+sgx_ucrypto = { path = "../../deps/rust-sgx-sdk/sgx_ucrypto" }      # edit by kxc, required by tls

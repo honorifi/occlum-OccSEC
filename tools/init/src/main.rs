@@ -8,8 +8,14 @@ use serde::Deserialize;
 use std::error::Error;
 use std::fs::File;
 use std::io::{ErrorKind, Read};
+use std::time::{Duration, Instant};
+
+mod stls;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // time clock start
+    let begin_time =Instant::now();
+
     // Load the configuration from initfs
     const IMAGE_CONFIG_FILE: &str = "/etc/image_config.json";
     let image_config = load_config(IMAGE_CONFIG_FILE)?;
@@ -41,6 +47,24 @@ fn main() -> Result<(), Box<dyn Error>> {
     if ret < 0 {
         return Err(Box::new(std::io::Error::last_os_error()));
     }
+
+    // edit by kxc v, generate and regist Occlum Instance's ident key.
+    let kssp_mode = match std::env::var("KSSP_MODE") {
+        Ok(val) => {
+            match &val[..] {
+                "on" => 1,
+                "off" => 0,
+                "shared_aes" => 2,
+                _ => 0,
+            }
+        },
+        Err(err) => 0,
+    };
+    stls::test_client::generate_and_regist_pubkey(kssp_mode);
+    // edit by kxc ^
+
+    // time clock end
+    println!("init time cost: {} ms", begin_time.elapsed().as_millis());
 
     Ok(())
 }

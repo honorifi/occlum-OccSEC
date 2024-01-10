@@ -96,3 +96,110 @@ impl File for HostSocket {
         self
     }
 }
+
+// copy from socket_file.rs, edit
+extern crate sgx_types;
+impl File for NfvSocket {
+    fn read(&self, buf: &mut [u8]) -> Result<usize> {
+        if self.pub_key_hash_tag != 0 {
+        println!("call nfv read");
+        }
+        self.host_sc.read(buf)
+    }
+
+    fn write(&self, buf: &[u8]) -> Result<usize> {
+        if self.pub_key_hash_tag != 0 {
+        println!("call nfv write");
+        }
+        self.host_sc.write(buf)
+    }
+
+    fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize> {
+        if self.pub_key_hash_tag != 0 {
+        println!("call nfv read_at");
+        }
+        self.host_sc.read_at(offset, buf)
+    }
+
+    fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize> {
+        if self.pub_key_hash_tag != 0 {
+        println!("call nfv write_at");
+        }
+        self.host_sc.write_at(offset, buf)
+    }
+
+    fn readv(&self, bufs: &mut [&mut [u8]]) -> Result<usize> {
+        if self.pub_key_hash_tag != 0 {
+            println!("call nfv readv");
+        }
+        self.host_sc.readv(bufs)
+    }
+
+    fn writev(&self, bufs: &[&[u8]]) -> Result<usize> {
+        // let aes_cipher = self.aes_cipher.read().unwrap();
+        // let mut ret_len = 0;
+        // if aes_cipher.key_valid() {
+        //     let mut enc_msg = Vec::new();
+        //     for data in bufs {
+        //         ret_len += data.len();
+        //         enc_msg.push(aes_cipher.encrypt_mark_len(data));
+        //     }
+        //     let mut enc_bufs = Vec::new();
+        //     let len = enc_msg.len();
+        //     for i in 0..len {
+        //         enc_bufs.push(&enc_msg[i][..]);
+        //     }
+        //     let attached_len_msg_len = len * LENGH_WIDTH;
+        //     return match self.host_sc.writev(&enc_bufs) {
+        //         Ok(x) => Ok(ret_len),
+        //         Err(err) => Err(err),
+        //     };
+        // }
+        if self.pub_key_hash_tag != 0 {
+            // println!("call nfv writev");
+            return self.do_sendmsg(bufs, SendFlags::empty(), None, None);
+        }
+        
+        self.host_sc.writev(bufs)
+    }
+
+    fn seek(&self, pos: SeekFrom) -> Result<off_t> {
+        self.seek(pos)
+    }
+
+    fn ioctl(&self, cmd: &mut IoctlCmd) -> Result<i32> {
+        self.host_sc.ioctl(cmd)
+    }
+
+    fn access_mode(&self) -> Result<AccessMode> {
+        self.host_sc.access_mode()
+    }
+
+    fn status_flags(&self) -> Result<StatusFlags> {
+        self.host_sc.status_flags()
+    }
+
+    fn set_status_flags(&self, new_status_flags: StatusFlags) -> Result<()> {
+        self.host_sc.set_status_flags(new_status_flags)
+    }
+
+    fn poll_new(&self) -> IoEvents {
+        self.host_sc.poll_new()
+    }
+
+    fn host_fd(&self) -> Option<&HostFd> {
+        self.host_sc.host_fd()
+    }
+
+    fn notifier(&self) -> Option<&IoNotifier> {
+        self.host_sc.notifier()
+    }
+
+    fn update_host_events(&self, ready: &IoEvents, mask: &IoEvents, trigger_notifier: bool) {
+        self.host_sc.update_host_events(ready, mask, trigger_notifier)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}

@@ -8,6 +8,7 @@ version = "0.29.7"
 dependencies = [
  "aligned",
  "atomic",
+ "base64",
  "bitflags",
  "bitvec",
  "ctor",
@@ -18,6 +19,7 @@ dependencies = [
  "lazy_static",
  "log",
  "memoffset 0.6.5",
+ "num-bigint",
  "rcore-fs",
  "rcore-fs-devfs",
  "rcore-fs-mountfs",
@@ -31,6 +33,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sgx_cov",
+ "sgx_rand",
  "sgx_tcrypto",
  "sgx_trts",
  "sgx_tse",
@@ -79,6 +82,14 @@ name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
+
+[[package]]
+name = "base64"
+version = "0.13.0"
+source = "git+https://github.com/mesalock-linux/rust-base64-sgx#dc7389e10817b078f289386b3b6a852ab6c4c021"
+dependencies = [
+ "sgx_tstd",
+]
 
 [[package]]
 name = "bitflags"
@@ -291,6 +302,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce"
 dependencies = [
  "autocfg 1.1.0",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.2.5"
+source = "git+https://github.com/mesalock-linux/num-bigint-sgx#76a5bed94dc31c32bd1670dbf72877abcf9bbc09"
+dependencies = [
+ "autocfg 1.1.0",
+ "num-integer",
+ "num-traits",
+ "sgx_tstd",
+]
+
+[[package]]
+name = "num-integer"
+version = "0.1.41"
+source = "git+https://github.com/mesalock-linux/num-integer-sgx#404c50e5378ca635261688b080dee328ff42b6bd"
+dependencies = [
+ "autocfg 0.1.8",
+ "num-traits",
+ "sgx_tstd",
+]
+
+[[package]]
+name = "num-traits"
+version = "0.2.10"
+source = "git+https://github.com/mesalock-linux/num-traits-sgx#af046e0b15c594c960007418097dd4ff37ec3f7a"
+dependencies = [
+ "autocfg 0.1.8",
+ "sgx_tstd",
 ]
 
 [[package]]

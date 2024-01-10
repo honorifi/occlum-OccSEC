@@ -32,6 +32,9 @@ ctor = "0.1"
 regex = { git = "https://github.com/mesalock-linux/regex-sgx", default-features = false, features = ["std", "unicode", "mesalock_sgx"] }
 goblin = { version = "0.5.4", default-features = false, features = ["elf64", "elf32", "endian_fd"] }
 intrusive-collections = "0.9"
+num-bigint = { git = "https://github.com/mesalock-linux/num-bigint-sgx"}    # edit by kxc, required by tls
+base64 = { git = "https://github.com/mesalock-linux/rust-base64-sgx"}      # edit by kxc, required by tls
+
 
 [patch.'https://github.com/apache/teaclave-sgx-sdk.git']
 sgx_tstd = { path = "../../deps/rust-sgx-sdk/sgx_tstd" }
@@ -49,8 +52,9 @@ pku = []                # PKU Support
 
 [target.'cfg(not(target_env = "sgx"))'.dependencies]
 sgx_types = { path = "../../deps/rust-sgx-sdk/sgx_types" }
-sgx_tstd = { path = "../../deps/rust-sgx-sdk/sgx_tstd", features = ["backtrace"] }
+sgx_tstd = { path = "../../deps/rust-sgx-sdk/sgx_tstd", features = ["backtrace", "net"] }     # edit by kxc, required by tls
 sgx_trts = { path = "../../deps/rust-sgx-sdk/sgx_trts" }
 sgx_tse = { path = "../../deps/rust-sgx-sdk/sgx_tse" }
 sgx_tcrypto = { path = "../../deps/rust-sgx-sdk/sgx_tcrypto" }
 sgx_cov = { path = "../../deps/rust-sgx-sdk/sgx_cov", optional = true }
+sgx_rand = { path = "../../deps/rust-sgx-sdk/sgx_rand" }   # edit by kxc, required by tls
